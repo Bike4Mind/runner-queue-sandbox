@@ -142,6 +142,11 @@ jobs:
             tier: medium
             filter: '--filter !@bike4mind/client --filter !@bike4mind/services --filter !@bike4mind/cli --filter !@bike4mind/slack --filter !@bike4mind/voice --filter !@bike4mind/desktop --filter !@bike4mind/workers --filter !@bike4mind/common --filter !@bike4mind/database --filter !@bike4mind/db-core --filter !@bike4mind/core'
             workers: ''
+          - name: misc tmpfs
+            tier: medium
+            filter: '--filter !@bike4mind/client --filter !@bike4mind/services --filter !@bike4mind/cli --filter !@bike4mind/slack --filter !@bike4mind/voice --filter !@bike4mind/desktop --filter !@bike4mind/workers --filter !@bike4mind/common --filter !@bike4mind/database --filter !@bike4mind/db-core --filter !@bike4mind/core'
+            workers: ''
+            tmpfs: 'true'
 
     steps:
       - name: Checkout code
@@ -236,6 +241,16 @@ jobs:
           key: turbo-test-v1-${{ runner.os }}-${{ matrix.shard.name }}-${{ github.sha }}-${{ github.run_attempt }}
           restore-keys: |
             turbo-test-v1-${{ runner.os }}-${{ matrix.shard.name }}-
+
+      - name: Disk probe
+        run: |
+          df -hT / /dev/shm | cat
+          lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | cat
+          for d in "$RUNNER_TEMP" /dev/shm; do
+            echo "sync write probe in $d"
+            dd if=/dev/zero of="$d/probe.bin" bs=4k count=2000 oflag=dsync 2>&1 | tail -1
+            rm -f "$d/probe.bin"
+          done
 
       - name: Mark shard start
         run: echo "SHARD_START_SECONDS=$(date +%s)" >> "$GITHUB_ENV"
