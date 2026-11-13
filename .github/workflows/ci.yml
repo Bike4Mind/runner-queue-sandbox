@@ -8,7 +8,26 @@ permissions:
   contents: read
 
 jobs:
+  shards:
+    if: github.event_name == 'merge_group'
+    runs-on: b4m-merge-queue
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Work
+        run: |
+          echo "shard=${{ matrix.shard }} runner=$RUNNER_NAME"
+          nproc
+          docker run --rm alpine:3.20 echo "docker ok"
+          sleep 120
+
   build:
+    needs: [shards]
+    if: ${{ !cancelled() && (needs.shards.result == 'success' || needs.shards.result == 'skipped') }}
     runs-on: ${{ github.event_name == 'merge_group' && 'b4m-merge-queue' || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
@@ -19,5 +38,3 @@ jobs:
           echo "runner=$RUNNER_NAME os=$RUNNER_OS arch=$RUNNER_ARCH"
           nproc
           free -g | sed -n 2p
-          node --version
-          docker --version
