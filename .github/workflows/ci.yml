@@ -16,7 +16,6 @@ env:
 
 jobs:
   core-build:
-    if: github.event_name != 'pull_request'
     runs-on: ${{ github.event_name == 'merge_group' && 'b4m-merge-queue' || 'ubuntu-latest' }}
     name: Core Build
     timeout-minutes: 15
@@ -90,7 +89,6 @@ jobs:
 
   test-shards:
     needs: core-build
-    if: github.event_name != 'pull_request'
     runs-on: ${{ github.event_name == 'merge_group' && 'b4m-merge-queue' || 'ubuntu-latest' }}
     name: Run Tests (${{ matrix.shard.name }})
     timeout-minutes: 30
