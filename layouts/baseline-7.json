@@ -1,0 +1,57 @@
+[
+  {
+    "name": "client 1/3",
+    "tier": "medium",
+    "filter": "--filter @bike4mind/client",
+    "workers": "",
+    "args": "--shard=1/3",
+    "mongod": "skip",
+    "sst": "skip"
+  },
+  {
+    "name": "client 2/3",
+    "tier": "medium",
+    "filter": "--filter @bike4mind/client",
+    "workers": "",
+    "args": "--shard=2/3",
+    "mongod": "skip",
+    "sst": "skip"
+  },
+  {
+    "name": "client 3/3",
+    "tier": "medium",
+    "filter": "--filter @bike4mind/client",
+    "workers": "",
+    "args": "--shard=3/3",
+    "mongod": "skip",
+    "sst": "skip"
+  },
+  {
+    "name": "services-workers-integration",
+    "tier": "medium",
+    "filter": "--filter @bike4mind/services",
+    "workers": "",
+    "integration-filter": "--filter @bike4mind/workers --filter @bike4mind/server-utils"
+  },
+  {
+    "name": "cli-desktop-workers",
+    "tier": "medium",
+    "filter": "--filter @bike4mind/cli --filter @bike4mind/slack --filter @bike4mind/voice --filter @bike4mind/desktop --filter @bike4mind/workers",
+    "workers": "",
+    "typecheck": "true"
+  },
+  {
+    "name": "data-client-integration",
+    "tier": "medium",
+    "filter": "--filter @bike4mind/common --filter @bike4mind/database --filter @bike4mind/db-core --filter @bike4mind/core",
+    "workers": "",
+    "tmpfs": "true",
+    "integration-filter": "--filter @bike4mind/client"
+  },
+  {
+    "name": "misc",
+    "tier": "medium",
+    "filter": "--filter !@bike4mind/client --filter !@bike4mind/services --filter !@bike4mind/cli --filter !@bike4mind/slack --filter !@bike4mind/voice --filter !@bike4mind/desktop --filter !@bike4mind/workers --filter !@bike4mind/common --filter !@bike4mind/database --filter !@bike4mind/db-core --filter !@bike4mind/core",
+    "workers": ""
+  }
+]
