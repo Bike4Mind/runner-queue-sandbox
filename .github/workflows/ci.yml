@@ -15,6 +15,11 @@ on:
       bike4mind_ref:
         description: Ref of Bike4Mind/bike4mind to build and test
         default: 7331c29baf16775b0652de3ca8d0c6fa81427675
+      turbo_cache:
+        description: restore replays cached test passes, off runs every test
+        type: choice
+        options: [restore, 'off']
+        default: restore
 
 permissions:
   contents: read
@@ -256,6 +261,7 @@ jobs:
           "require('mongodb-memory-server').MongoBinary.getPath({}).then(p => console.log('mongod binary ready:', p)).catch(e => console.warn('prewarm skipped:', e.message))"
 
       - name: Restore turbo test cache
+        if: ${{ inputs.turbo_cache != 'off' }}
         uses: actions/cache/restore@v5
         with:
           path: .turbo/cache
@@ -366,6 +372,30 @@ jobs:
             echo "::warning title=Slow test shard::${summary} - over its ${SHARD_SOFT_BUDGET_SECONDS}s soft budget. Not a failure: split or speed up the shard before it reaches the job timeout."
           fi
 
+      # What turbo hashed for each test task, so two runs of one commit can be compared.
+      - name: Collect turbo cache inputs
+        if: ${{ !cancelled() }}
+        run: |
+          out="$RUNNER_TEMP/turbo-inputs"
+          mkdir -p "$out/runs"
+          find . -maxdepth 4 -path '*/.turbo/test-context' -not -path '*/node_modules/*' | while read -r f; do
+            mkdir -p "$out/$(dirname "$f")"
+            cp "$f" "$out/$f"
+          done
+          if compgen -G ".turbo/runs/*.json" > /dev/null; then
+            cp .turbo/runs/*.json "$out/runs/"
+          fi
+
+      - name: Upload turbo cache inputs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: turbo-inputs-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/turbo-inputs
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Prune turbo test cache
         id: prune-turbo-cache
         if: ${{ !cancelled() && github.event_name == 'push' && hashFiles('.turbo/runs/*.json') != '' }}
@@ -419,18 +449,20 @@ jobs:
           EVENT: ${{ github.event_name }}
           LAYOUT: ${{ needs.layout.outputs.layout }}
           REF: ${{ needs.layout.outputs.ref }}
+          TURBO_CACHE: ${{ inputs.turbo_cache || 'restore' }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --paginate > jobs.json
           cpus='[]'
           if compgen -G "cpu/*/cpu.json" > /dev/null; then
             cpus=$(jq -s . cpu/*/cpu.json)
           fi
-          jq -s --argjson cpus "$cpus" --arg event "$EVENT" --arg layout "$LAYOUT" --arg ref "$REF" '
+          jq -s --argjson cpus "$cpus" --arg event "$EVENT" --arg layout "$LAYOUT" --arg ref "$REF" --arg turbo_cache "$TURBO_CACHE" '
             def secs(a; b): if a == null or b == null then null else ((b | fromdateiso8601) - (a | fromdateiso8601)) end;
             {
               event: $event,
               layout: $layout,
               bike4mind_ref: $ref,
+              turbo_cache: $turbo_cache,
               jobs: [
                 .[].jobs[]
                 | select(.completed_at != null and .name != "Result")
